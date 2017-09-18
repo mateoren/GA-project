@@ -6,7 +6,6 @@ List_Sequence := (x,y) -> apply(toList y, i -> x#i);
 isThisEntryGood = (I,E) -> (
     
     
-  
     newE := append(E,I);
     
     nEparameters := for i to #newE-1 list product for j to d-1 list s_{j+1,newE#i#j};
@@ -29,9 +28,12 @@ isThisSubsetGood = E -> (
     
     completableEntries = select(for I in last \ baseName \ gens R list (I, isThisEntryGood(I,E)),p -> p#1);
     
-    (if #completableEntries == #indexedEntries then 0
-    else if #completableEntries < #indexedEntries then 1);
+    (if #completableEntries == #indexedEntries then k := 1
+    else if #completableEntries < #indexedEntries then k = 0);
+
+    k
     
+    -- creo que tengo que volver a agregar el codigo de antes a esta funcion para cuando tenga que visualizar los resultados
     
     )
 
@@ -62,53 +64,59 @@ printSlicesCompletion = completableEntries-> (
     )
 
 
-
+-----------------------------------------------------------------------------------------------
 -- GA functions
 
 
-fitAndRelFit = pop -> (
+fitness = pop -> (
     
-    --may as well output the fitness list and relative fitness list
-    -- ahh un gran problema... tengo que maximizar el fitness ... no minimizar.
-    -- inventar una cota superior y multiplicar el factor de abajo por un escalar que diferencia mas 
-    -- el fitness de cromosomas diferentes.
+    -- Inputs: pop, indexedEntries, popSize, 
+
     
-    
-    fit := for i to popSize-1 list sum(pop#i) + isThisSubsetGood(pop#i)*#indexedEntries;
+    fit = for i to popSize-1 list 1./(sum(pop#i) + (1 - isThisSubsetGood(strToSubset(pop#i)))*#indexedEntries);
     fitSum := sum(fit);
-    relFit := for i to popSize-1 list numeric(fit#i/fitSum);
+    rFit = for i to popSize-1 list numeric(fit#i/fitSum);
     
-    
+    --output
+    --fit, rFit
     
     )
 
 
 crossover = (s1, s2) -> (
     
-    k := random(1,10);
+    -- Inputs: s1, s2, xProb, strSize
+    
+    k := random(1,100);
     xsite := random(0,strSize);
-    (if k <= xProb*10 then child1 := join(s1_(0..xsite-1), s2_(xsite..strSize-1)), child2:= join(s2_(0..xsite-1), s1_(xsite..strSize-1)) 
-    else child1 := s1, child2 := s2);
-
-    child1, child2;
+    (if k <= xProb*100 then (child1 := join(s1_(0..xsite-1), s2_(xsite..strSize-1)), child2:= join(s2_(0..xsite-1), s1_(xsite..strSize-1))) 
+    else (child1 = s1, child2 = s2));
+    
+    --output
+    (child1, child2)
     
     )
 
 
 mutation = s1 -> (
     
+    -- Inputs: s1, mutProb, strSize
+    
     k := random(1,100);
     v := new MutableList from s1;
-    if k<= mutProb*100 then r = random(0, strSize-1), v#r = 1 - v#r;
+    if k <= mutProb*100 then (r = random(0, strSize-1), v#r = 1 - v#r);
     
-    toList v;
-    
+    --output
+    toList v
     
     )
 
 
 strToSubset = s -> (
     
+    -- Inputs: strSize, tSize, s
+    
+    --Output
     for i to strSize-1 list (if s#i == 0 then continue; {i%((tSize#0)*(tSize#1))//tSize#1 + 1,i%((tSize#0)*(tSize#1))%tSize#1 + 1 ,i//((tSize#0)*(tSize#1)) + 1})
     
     )
@@ -116,39 +124,44 @@ strToSubset = s -> (
 
 roulette = pop -> (
     
-    -- output a list of pairs of the elements that are going to mate.
+    -- Inputs: pop, popSize, rFit, 
     
-    random(0.,1.)
-    prob := 0
-    roultt := for i to popSize-1 list prob = prob + relFit#i;
+    prob := 0;
+    roultt := for i to popSize-1 list prob = prob + rFit#i;
+    roultt = prepend(0,roultt);
+    rValues := for i to popSize-1 list random(0.,1.);
+    mating = new MutableList from {}; 
     
-    mating = {};
+    for i to popSize-1 do (for j to popSize-1 do (if roultt#(j) <= rValues#i and rValues#i < roultt#(j+1) then mating = append(mating,pop#j)));
     
-    for i to popSize-1 do for 
+    parents = {};
+    t := 0; while t < popSize-1 do (parents = append(parents, (mating#t, mating#(t+1))); t = t + 2);
     
     
-    
+    -- Output
+    parents 
+ 
     )
 
-
-
+-- End of function definitions
+--------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------
 
 restart
 
 
 
-tSize = (2,2,2);
+tSize = (5,5,3);
 
 d = #tSize;
    
-
 firstIndices = {1,1,1};
     
 lastIndices = for i to d-1 list tSize#i;
 
 -- all entries
 indexedEntries = toList (firstIndices..lastIndices);
-    
+
 -- indexed variables
 listOfParameters = flatten for i from 1 to d list for j from 1 to lastIndices#(i-1) list s_{i,j};
 
@@ -156,34 +169,78 @@ listOfParameters = flatten for i from 1 to d list for j from 1 to lastIndices#(i
 R=QQ[p_firstIndices..p_lastIndices];
 S=QQ[listOfParameters];
     
-    
 -- give random values to the parameters
 substituteList = for i to #listOfParameters-1 list (flatten entries vars S)_i => random(1,100); 
-
-
 
 
 ----------------------------------------------------------------------------------------------------
 -- GA
 
 
-
-
 strSize = #indexedEntries;
 
-popSize = 30;
+popSize = 20;
 
-generations  = {};
+generations = {};
+
+maxGen = 200;
+
+xProb = 0.7;
+
+mutProb = 0.07;
+
+currPop = for i to popSize-1 list for i to strSize-1 list random(0,1);
+
+generations = append(generations, currPop);
+
+genCounter = 0;
+
+-- Tengo que ser super cuidadoso con los inputs de las funciones
+-- Otra cosa es que las funciones no todas tienen que dar un output especifico... solo es necesario que hagan algo.
+
+while genCounter < maxGen-1 do (
+    
+    --generations = append(generations, currPop);
+    
+    -- Computes the fitness and relative fitness of the current pop and defines both lists
+    fitness(currPop);
+    
+    -- Form mating pool
+    parents = roulette(currPop);
+    
+    -- Forms new population
+    newPop = {};
+    for i to length(parents)-1 do (
+	
+	(child1, child2) = crossover(parents#i#0, parents#i#1),
+	mutChild1 := mutation(child1),
+	mutChild2 := mutation(child2),
+	newPop = append(newPop, mutChild1),
+	newPop = append(newPop, mutChild2)
+	
+        );
+    
+    currPop = newPop;
+    
+    generations = append(generations, currPop);
+    
+    genCounter = genCounter + 1;
+    
+    )
 
 
+-- Now, after all the generations are completed, choose the string with higher fitness.
+
+-- sera que tengo un problema con la forma en la que estoy ordenando las entradas?
+-- el orden debe ser igual que el de indexedEntries?
+
+-- tal vez seria bueno hacer mejor la fitness function...  que diferencie
+-- mejor los fitness... tal vez poner una exponencial o algo asi... o elevando
+-- al cuadrado
 
 
--- 
+-- aun me queda la duda de si el programa si esta haciendo lo que yo quiero. 
+-- no se si hay algun problema con la forma como yo puse los indices
+-- ahora no tengo tiempo, pero luego debo reordenar eso y ver 
 
-xProb = 0.6;
-
-mutProb = 0.05;
-
-startPop = for i to popSize-1 list for i to strSize-1 list random(0,1);
-
-
+-- also i should have implemented the elitism mechanic
