@@ -2,20 +2,13 @@
 
 List_Sequence := (x,y) -> apply(toList y, i -> x#i);
 
-
 isThisEntryGood = (I,E) -> (
     
-    
     newE := append(E,I);
-    
     nEparameters := for i to #newE-1 list product for j to d-1 list s_{j+1,newE#i#j};
-    
     newRank := rank substitute(jacobian ideal nEparameters ,substituteList);
-
     newRank == originalRank
-    
     )
-
 
 isThisSubsetGood = E -> (
     
@@ -23,28 +16,20 @@ isThisSubsetGood = E -> (
     -- also stores the entries completable from E
     
     Eparameters = for i to #E-1 list product for j to d-1 list s_{j+1,E#i#j};
-    
     originalRank = rank substitute(jacobian ideal Eparameters, substituteList);
-    
     completableEntries = select(for I in last \ baseName \ gens R list (I, isThisEntryGood(I,E)),p -> p#1);
     
     (if #completableEntries == #indexedEntries then k := 1
     else if #completableEntries < #indexedEntries then k = 0);
 
     k
-    
-    -- creo que tengo que volver a agregar el codigo de antes a esta funcion para cuando tenga que visualizar los resultados
-    
     )
 
 
 printSlicesOriginal = specifiedEntries-> (
     
-    
     for i from 1 to lastIndices#2 do M_(i)=mutableMatrix(ZZ,lastIndices#0,lastIndices#1);
-    
     for i to #specifiedEntries-1 do M_(specifiedEntries#i#2)_(specifiedEntries#i#0-1,specifiedEntries#i#1-1)=1; -- -1 to the index, starts at 0.
-    
     for i from 1 to lastIndices#2 do << M_(i); -- << M_(i) prints the matrix.
     
     )    
@@ -54,25 +39,20 @@ printSlicesCompletion = completableEntries-> (
     -- The input is a list of sequences where each sequence is of the form: ({1,2,1},true) ----- does this need to be changed?
 
     for i from 1 to lastIndices#2 do M_(i)=mutableMatrix(ZZ,lastIndices#0,lastIndices#1);
-    
     for i to #completableEntries-1 do M_(completableEntries#i#0#2)_(completableEntries#i#0#0-1,completableEntries#i#0#1-1)=1;
-    
     for i from 1 to lastIndices#2 do << M_(i);
     
     << " - - ";
     
     )
 
-
------------------------------------------------------------------------------------------------
--- GA functions
-
+------------------------------
+-- Genetic Algorithm Functions
 
 fitness = pop -> (
     
     -- Inputs: pop, indexedEntries, popSize, 
 
-    
     fit = for i to popSize-1 list 1./(sum(pop#i) + (1 - isThisSubsetGood(strToSubset(pop#i)))*#indexedEntries);
     fitSum := sum(fit);
     rFit = for i to popSize-1 list numeric(fit#i/fitSum);
@@ -81,7 +61,6 @@ fitness = pop -> (
     --fit, rFit
     
     )
-
 
 crossover = (s1, s2) -> (
     
@@ -97,7 +76,6 @@ crossover = (s1, s2) -> (
     
     )
 
-
 mutation = s1 -> (
     
     -- Inputs: s1, mutProb, strSize
@@ -111,7 +89,6 @@ mutation = s1 -> (
     
     )
 
-
 strToSubset = s -> (
     
     -- Inputs: strSize, tSize, s
@@ -120,7 +97,6 @@ strToSubset = s -> (
     for i to strSize-1 list (if s#i == 0 then continue; {i%((tSize#0)*(tSize#1))//tSize#1 + 1,i%((tSize#0)*(tSize#1))%tSize#1 + 1 ,i//((tSize#0)*(tSize#1)) + 1})
     
     )
-
 
 roulette = pop -> (
     
@@ -137,26 +113,20 @@ roulette = pop -> (
     parents = {};
     t := 0; while t < popSize-1 do (parents = append(parents, (mating#t, mating#(t+1))); t = t + 2);
     
-    
     -- Output
     parents 
  
     )
-
+    
+------------------------------
 -- End of function definitions
---------------------------------------------------------------------------------------------------
---------------------------------------------------------------------------------------------------
+------------------------------
 
 restart
 
-
-
 tSize = (5,5,3);
-
 d = #tSize;
-   
 firstIndices = {1,1,1};
-    
 lastIndices = for i to d-1 list tSize#i;
 
 -- all entries
@@ -172,27 +142,18 @@ S=QQ[listOfParameters];
 -- give random values to the parameters
 substituteList = for i to #listOfParameters-1 list (flatten entries vars S)_i => random(1,100); 
 
-
-----------------------------------------------------------------------------------------------------
--- GA
-
+--------------------
+-- Genetic Algorithm
+--------------------
 
 strSize = #indexedEntries;
-
 popSize = 20;
-
 generations = {};
-
 maxGen = 200;
-
 xProb = 0.7;
-
 mutProb = 0.07;
-
 currPop = for i to popSize-1 list for i to strSize-1 list random(0,1);
-
 generations = append(generations, currPop);
-
 genCounter = 0;
 
 -- Tengo que ser super cuidadoso con los inputs de las funciones
@@ -221,26 +182,7 @@ while genCounter < maxGen-1 do (
         );
     
     currPop = newPop;
-    
     generations = append(generations, currPop);
-    
     genCounter = genCounter + 1;
     
     )
-
-
--- Now, after all the generations are completed, choose the string with higher fitness.
-
--- sera que tengo un problema con la forma en la que estoy ordenando las entradas?
--- el orden debe ser igual que el de indexedEntries?
-
--- tal vez seria bueno hacer mejor la fitness function...  que diferencie
--- mejor los fitness... tal vez poner una exponencial o algo asi... o elevando
--- al cuadrado
-
-
--- aun me queda la duda de si el programa si esta haciendo lo que yo quiero. 
--- no se si hay algun problema con la forma como yo puse los indices
--- ahora no tengo tiempo, pero luego debo reordenar eso y ver 
-
--- also i should have implemented the elitism mechanic
